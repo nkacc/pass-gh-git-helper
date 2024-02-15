@@ -13,6 +13,7 @@ import fnmatch
 import logging
 import os
 import os.path
+import platform
 from pathlib import Path
 import re
 import subprocess
@@ -23,10 +24,25 @@ import xdg.BaseDirectory
 
 
 LOGGER = logging.getLogger()
+NK_CONFIG_FILE_NAME = "git-pass-gh-mapping.ini"
+if platform.system() == 'Windows': # probably work PC/Lap
+    GITHUBCLI_DIR = r"Dev\bin\scoop\persist-in-windows\others\GitHubCLI"
+    GITHUBCLI_DIR = Path(os.path.expanduser(r"~\nk")) / GITHUBCLI_DIR
+elif platform.system() == 'Linux': # Primary
+    GITHUBCLI_DIR = None
+    #Yet2Decide
+else: GITHUBCLI_DIR = None
 CONFIG_FILE_NAME = "git-pass-mapping.ini"
-DEFAULT_CONFIG_FILE = (
-    Path(xdg.BaseDirectory.save_config_path("pass-git-helper")) / CONFIG_FILE_NAME
-)
+if GITHUBCLI_DIR and GITHUBCLI_DIR.is_dir():
+    NK_DEFAULT_CONFIG_FILE = GITHUBCLI_DIR / NK_CONFIG_FILE_NAME
+    DEFAULT_CONFIG_FILE = (
+        Path(xdg.BaseDirectory.xdg_config_home) / "pass-git-helper" / CONFIG_FILE_NAME
+    ) # without creating directory
+else:
+    NK_DEFAULT_CONFIG_FILE = None
+    DEFAULT_CONFIG_FILE = (
+        Path(xdg.BaseDirectory.save_config_path("pass-git-helper")) / CONFIG_FILE_NAME
+    )
 
 
 def parse_arguments(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
@@ -92,6 +108,13 @@ def parse_mapping(mapping_file: Optional[IO]) -> configparser.ConfigParser:
     if mapping_file is not None:
         LOGGER.debug("Parsing command line mapping file")
         return parse(mapping_file)
+
+    # next precedence is NK's config file
+    if NK_DEFAULT_CONFIG_FILE is not None:
+        default_file = NK_DEFAULT_CONFIG_FILE
+        LOGGER.debug("Parsing NK's mapping file %s", default_file)
+        with default_file.open("r") as file_handle:
+            return parse(file_handle)
 
     # fall back on XDG config location
     xdg_config_dir = xdg.BaseDirectory.load_first_config("pass-git-helper")
