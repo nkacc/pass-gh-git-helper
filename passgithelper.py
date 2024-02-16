@@ -13,7 +13,6 @@ import fnmatch
 import logging
 import os
 import os.path
-import platform
 from pathlib import Path
 import re
 import subprocess
@@ -22,19 +21,14 @@ from typing import Dict, IO, Mapping, Optional, Pattern, Sequence, Text
 
 import xdg.BaseDirectory
 
+import nkgh
+
 
 LOGGER = logging.getLogger()
 NK_CONFIG_FILE_NAME = "git-pass-gh-mapping.ini"
-if platform.system() == 'Windows': # probably work PC/Lap
-    GITHUBCLI_DIR = r"Dev\bin\scoop\persist-in-windows\others\GitHubCLI"
-    GITHUBCLI_DIR = Path(os.path.expanduser(r"~\nk")) / GITHUBCLI_DIR
-elif platform.system() == 'Linux': # Primary
-    GITHUBCLI_DIR = None
-    #Yet2Decide
-else: GITHUBCLI_DIR = None
 CONFIG_FILE_NAME = "git-pass-mapping.ini"
-if GITHUBCLI_DIR and GITHUBCLI_DIR.is_dir():
-    NK_DEFAULT_CONFIG_FILE = GITHUBCLI_DIR / NK_CONFIG_FILE_NAME
+if nkgh.GITHUBCLI_DIR and nkgh.GITHUBCLI_DIR.is_dir():
+    NK_DEFAULT_CONFIG_FILE = nkgh.GITHUBCLI_DIR / NK_CONFIG_FILE_NAME
     DEFAULT_CONFIG_FILE = (
         Path(xdg.BaseDirectory.xdg_config_home) / "pass-git-helper" / CONFIG_FILE_NAME
     ) # without creating directory
@@ -407,7 +401,12 @@ def get_password(
     header = get_request_section_header(request)
     section = find_mapping_section(mapping, header)
 
-    pass_target = define_pass_target(section, request)
+    target = define_pass_target(section, request)
+    if target.startswith("GitHubCLI:"):
+        LOGGER.debug('Requesting NK\'s "%s"', target)
+        if nkgh.get_password(target[10:], section, request):
+            return # nkgh.get_password already responded in stdout
+    pass_target = target
 
     password_extractor = SpecificLineExtractor(0, 0, option_suffix="_password")
     password_extractor.configure(section)
