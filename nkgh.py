@@ -45,6 +45,8 @@ def get_password(
         The success status as a bool.
     """
     if "protocol" not in request or request["protocol"] != "https":
+        LOGGER.debug("protocol= entry missing or not 'https' in request. Needed for GH cli")
+        LOGGER.debug("Fall back on requesting from pass")
         return False # gh helper only respond for https
 
     if target.lower() in ("og", "orginal"):
@@ -66,10 +68,10 @@ def get_password(
         "GH_PATH" : gh_cli,
         "GH_DEBUG" : "no"
     }
+    environment = os.environ.copy()
     if target:
         environment["GH_CONFIG_DIR"] = target
-    elif "GH_CONFIG_DIR" in os.environ:
-        environment["GH_CONFIG_DIR"] = os.environ["GH_CONFIG_DIR"]
+        LOGGER.debug('Setting GH_CONFIG_DIR to "%s"', target)
 
     request_text = "protocol={protocol}\nhost={host}\n"
     request_text += ("username={username}\n" if "username" in request else "")
@@ -77,6 +79,10 @@ def get_password(
         protocol=request["protocol"],
         host=request["host"],
         username=request.get("username")
+    )
+    LOGGER.debug(
+        'Requesting `gh auth git-credential` with "%s" piped',
+        request_text.replace("\n", "\\n")
     )
     process = subprocess.run(
         [gh_cli, "auth", "git-credential", "get"],
@@ -103,13 +109,21 @@ def get_password(
         )
 
     if not success_flag:
-        environment.pop("GH_CONFIG_DIR", None) # og gh is enough
+        environment.pop("GH_CONFIG_DIR", None) # raw gh is enough
 
         if "username" in request:
             username = request["username"]
+            LOGGER.debug(
+                'Re-Requesting `gh auth token` with "%s" as args',
+                {"host":request["host"], "username":username}
+            )
         elif section.get("gh_username"):
             # if username not in request use from mapping file
             username = section.get("gh_username")
+            LOGGER.debug(
+                'Re-Requesting `gh auth token` with "%s" as args',
+                {"host":request["host"], "gh_username":username}
+            )
         else:
             username = None # Yet2Decide
 
@@ -131,4 +145,5 @@ def get_password(
 
         return True # Success
     else:
+        LOGGER.debug("Fall back on requesting from pass")
         return False # Failed
