@@ -6,6 +6,7 @@
 """
 
 
+import os
 import platform
 import subprocess
 import configparser
@@ -49,9 +50,16 @@ def get_password(
     if target.lower() in ("og", "orginal"):
         target = None # Let gh figure it out
     elif target == "" or target.lower() == "default":
-        target = str(GITHUBCLI_DIR / "config")
+        if GITHUBCLI_DIR and GITHUBCLI_DIR.is_dir():
+            target = str(GITHUBCLI_DIR / "config")
+        else:
+            target = str(Path("~/.config/gh_").expanduser())
+            # `GH_CONFIG_DIR` - `$HOME/.config/gh`.
     else:
-        target = str(GITHUBCLI_DIR / target)
+        if GITHUBCLI_DIR and GITHUBCLI_DIR.is_dir():
+            target = str(GITHUBCLI_DIR / target)
+        else:
+            target = str(Path("~/.config/gh_"+target).expanduser())
 
     gh_cli = str(Path.home()) + r"\nk\Dev\bin\scoop\dir\apps\gh\current\bin\gh.exe"
     environment = {
@@ -60,6 +68,8 @@ def get_password(
     }
     if target:
         environment["GH_CONFIG_DIR"] = target
+    elif "GH_CONFIG_DIR" in os.environ:
+        environment["GH_CONFIG_DIR"] = os.environ["GH_CONFIG_DIR"]
 
     request_text = "protocol={protocol}\nhost={host}\n"
     request_text += ("username={username}\n" if "username" in request else "")
