@@ -402,6 +402,9 @@ def get_password(
     section = find_mapping_section(mapping, header)
 
     target = define_pass_target(section, request)
+    if target == "SKIP":
+        LOGGER.info("Skipping processing as mentioned in mapping section")
+        sys.exit(1)
     if target.startswith("GitHubCLI:"):
         LOGGER.debug('Requesting NK\'s "%s"', target)
         if nkgh.get_password(target[10:], section, request):
