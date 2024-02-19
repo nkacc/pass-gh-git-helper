@@ -7,7 +7,6 @@
 
 
 import os
-import sys
 import platform
 import subprocess
 import configparser
@@ -46,23 +45,13 @@ def get_password(
         The success status as a bool.
     """
     if section.get("skip_gh") is not None:
-        if section.get("skip_pass") is not None:
-            LOGGER.info(
-                "Skipping processing because both skip_gh & skip_pass in mapping section"
-            )
-            sys.exit(1)
-        else:
-            LOGGER.debug("Skipping GH cli. Fall back on requesting from pass")
-            return False
+        LOGGER.debug("Skipping GH cli. Fall back on requesting from pass")
+        return False
 
     if "protocol" not in request or request["protocol"] != "https":
         LOGGER.debug("protocol= entry missing or not 'https' in request. Needed for GH cli")
-        if section.get("skip_pass") is None:
-            LOGGER.debug("Fall back on requesting from pass")
-            return False # gh helper only respond for https
-        else:
-            LOGGER.debug("Skipping pass. Failing")
-            return True # Failing
+        LOGGER.debug("Fall back on requesting from pass")
+        return False # gh helper only respond for https
 
     if target.lower() in ("og", "orginal"):
         target = None # Let gh figure it out
@@ -160,9 +149,5 @@ def get_password(
 
         return True # Success
     else:
-        if section.get("skip_pass") is None:
-            LOGGER.debug("Fall back on requesting from pass")
-            return False # Failed
-        else:
-            LOGGER.debug("Skipping pass. Failing")
-            return True # Failing
+        LOGGER.debug("Fall back on requesting from pass")
+        return False # Failed

@@ -409,6 +409,9 @@ def get_password(
         LOGGER.debug('Requesting NK\'s "%s"', target)
         if nkgh.get_password(target[10:], section, request):
             return # nkgh.get_password already responded in stdout
+    if section.get("skip_pass") is not None:
+        LOGGER.debug("Skipping pass and failing")
+        return # Failing
     pass_target = target
 
     password_extractor = SpecificLineExtractor(0, 0, option_suffix="_password")
