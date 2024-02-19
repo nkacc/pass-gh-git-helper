@@ -44,7 +44,7 @@ def get_password(
     Returns:
         The success status as a bool.
     """
-    if section.get("skip_gh") is not None:
+    if section.getboolean("skip_gh"):
         LOGGER.debug("Skipping GH cli. Fall back on requesting from pass")
         return False
 
